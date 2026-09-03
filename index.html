@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Hub (No Database Version)</title>
+  <style>
+    :root { --primary: #1a73e8; --bg: #f8f9fa; --border: #dadce0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg); color: #3c4043; }
+    nav { background: #fff; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .hidden { display: none !important; }
+    button { background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #1557b0; }
+    input, select, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; }
+    th { background: #f1f3f4; }
+    iframe { width: 100%; height: 450px; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
+    .group-box { background: #f1f3f4; border-radius: 6px; padding: 0.75rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <h2>Classroom Hub</h2>
+  <div>
+    <label><b>Mode:</b> </label>
+    <select id="roleSelect" onchange="switchRole()" style="width: auto; display: inline-block;">
+      <option value="teacher">Teacher (Admin)</option>
+      <option value="student">Student View</option>
+    </select>
+  </div>
+</nav>
+
+<main>
+
+  <!-- TEACHER CONTROLS -->
+  <div id="teacherView">
+
+    <!-- 1. EXCEL / CSV GRADE UPLOAD -->
+    <div class="card">
+      <h3>1. Upload Student Grades (Excel / CSV)</h3>
+      <p>Upload a `.csv` file with columns: <b>Name, Section, Quiz1, Midterm, Final</b></p>
+      <input type="file" id="csvFileInput" accept=".csv">
+      <button onclick="processCSV()">Upload and Update Gradebook</button>
+    </div>
+
+    <!-- 2. GOOGLE FORMS & DOCS INTEGRATION -->
+    <div class="card">
+      <h3>2. Post Quiz (Google Forms) or Materials (Google Docs/Sheets)</h3>
+      <input type="text" id="postTitle" placeholder="Post Title (e.g., Unit 1 Quiz)">
+      <select id="postType">
+        <option value="quiz">Quiz (Google Form)</option>
+        <option value="doc">Assignment (Google Doc)</option>
+        <option value="sheet">Live Gradebook (Google Sheet Embed)</option>
+      </select>
+      <textarea id="postContent" placeholder="Instructions for students..."></textarea>
+      <input type="url" id="embedUrl" placeholder="Paste Embed URL / Google Form Share Link">
+      <button onclick="addPost()">Publish Post</button>
+    </div>
+
+    <!-- 3. RANDOM GROUP GENERATOR -->
+    <div class="card">
+      <h3>3. Random Group Generator</h3>
+      <textarea id="studentListInput" placeholder="Enter student names separated by commas (or upload CSV above first)"></textarea>
+      <div style="display: flex; gap: 10px;">
+        <select id="groupMode">
+          <option value="numGroups">Number of Groups</option>
+          <option value="perGroup">Students per Group</option>
+        </select>
+        <input type="number" id="groupCount" placeholder="Count (e.g. 4)" min="1">
+      </div>
+      <button onclick="generateGroups()">Randomize Groups</button>
+      <div id="groupResults"></div>
+    </div>
+
+  </div>
+
+  <!-- SHARED CLASS STREAM & QUIZZES -->
+  <div class="card">
+    <h3>Class Announcements & Quizzes</h3>
+    <div id="streamContainer"><i>No quizzes or posts added yet.</i></div>
+  </div>
+
+  <!-- STUDENT GRADE TRACKER -->
+  <div class="card">
+    <h3>Student Gradebook</h3>
+    <div id="studentSearchArea" class="hidden">
+      <input type="text" id="studentSearchName" placeholder="Enter your Name to search your grades...">
+      <button onclick="searchStudentGrade()">View My Scores</button>
+    </div>
+    
+    <div id="gradeTableWrapper">
+      <table id="gradesTable">
+        <thead id="tableHeader">
+          <tr><th>No grades uploaded yet. Upload a CSV file above.</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  let parsedGradesData = [];
+  let posts = [];
+
+  function switchRole() {
+    const role = document.getElementById('roleSelect').value;
+    const teacherView = document.getElementById('teacherView');
+    const studentSearchArea = document.getElementById('studentSearchArea');
+
+    if (role === 'teacher') {
+      teacherView.classList.remove('hidden');
+      studentSearchArea.classList.add('hidden');
+      renderTable(parsedGradesData);
+    } else {
+      teacherView.classList.add('hidden');
+      studentSearchArea.classList.remove('hidden');
+      document.getElementById('tableBody').innerHTML = '';
+    }
+  }
+
+  // 1. Process CSV File Upload
+  function processCSV() {
+    const fileInput = document.getElementById('csvFileInput');
+    const file = fileInput.files[0];
+
+    if (!file) return alert('Please select a CSV file first.');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      
+      if (lines.length === 0) return alert('File is empty.');
+
+      parsedGradesData = lines.map(line => line.split(',').map(cell => cell.trim()));
+      renderTable(parsedGradesData);
+
+      // Auto-fill student names for group generator
+      const names = parsedGradesData.slice(1).map(row => row[0]).filter(Boolean);
+      document.getElementById('studentListInput').value = names.join(', ');
+
+      alert('Grades loaded successfully!');
+    };
+    reader.readAsText(file);
+  }
+
+  function renderTable(data) {
+    if (!data || data.length === 0) return;
+
+    const thead = document.getElementById('tableHeader');
+    const tbody = document.getElementById('tableBody');
+
+    // Headers
+    thead.innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+    // Rows
+    tbody.innerHTML = data.slice(1).map(row => `
+      <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
+    `).join('');
+  }
+
+  // 2. Search Individual Grade for Student
+  function searchStudentGrade() {
+    const nameQuery = document.getElementById('studentSearchName').value.toLowerCase().trim();
+    if (!nameQuery) return alert('Please enter your name.');
+    if (parsedGradesData.length === 0) return alert('No grades have been uploaded by the teacher yet.');
+
+    const headers = parsedGradesData[0];
+    const studentRow = parsedGradesData.slice(1).find(row => row[0].toLowerCase().includes(nameQuery));
+
+    const tbody = document.getElementById('tableBody');
+    if (!studentRow) {
+      tbody.innerHTML = `<tr><td colspan="${headers.length}">No records found matching "${nameQuery}".</td></tr>`;
+      return;
+    }
+
+    renderTable([headers, studentRow]);
+  }
+
+  // 3. Post Quizzes / Docs
+  function addPost() {
+    const title = document.getElementById('postTitle').value;
+    const type = document.getElementById('postType').value;
+    const content = document.getElementById('postContent').value;
+    const url = document.getElementById('embedUrl').value;
+
+    if (!title) return alert('Please add a title.');
+
+    posts.unshift({ title, type, content, url });
+    renderPosts();
+  }
+
+  function renderPosts() {
+    const container = document.getElementById('streamContainer');
+    if (posts.length === 0) return;
+
+    container.innerHTML = posts.map(p => `
+      <div style="border-bottom: 1px solid #ddd; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h4>[${p.type.toUpperCase()}] ${p.title}</h4>
+        <p>${p.content}</p>
+        ${p.url ? `<iframe src="${p.url}"></iframe>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // 4. Random Group Generator
+  function generateGroups() {
+    const input = document.getElementById('studentListInput').value;
+    if (!input) return alert('Please enter student names or upload a CSV file.');
+
+    let students = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const mode = document.getElementById('groupMode').value;
+    const count = parseInt(document.getElementById('groupCount').value);
+
+    if (!count || count < 1) return alert('Enter a valid count number.');
+
+    // Shuffle Array
+    let shuffled = [...students].sort(() => 0.5 - Math.random());
+    let groups = [];
+
+    if (mode === 'numGroups') {
+      for (let i = 0; i < count; i++) groups.push([]);
+      shuffled.forEach((student, index) => {
+        groups[index % count].push(student);
+      });
+    } else {
+      while (shuffled.length > 0) {
+        groups.push(shuffled.splice(0, count));
+      }
+    }
+
+    document.getElementById('groupResults').innerHTML = groups.map((g, idx) => `
+      <div class="group-box"><strong>Group ${idx + 1}:</strong> ${g.join(', ')}</div>
+    `).join('');
+  }
+</script>
+
+</body>
+</html>
