@@ -1,0 +1,15 @@
+{
+  "name": "classroom-hub",
+  "version": "1.0.0",
+  "description": "Google Classroom Clone with Google Forms & Docs integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.0"
+  }
+}
