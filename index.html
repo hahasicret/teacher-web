@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classroom Hub | Portal</title>
+  <title>Classroom Hub | Multi-Teacher Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -16,6 +16,7 @@
       --text-muted: #94a3b8;
       --input-bg: #0b111e;
       --danger: #ef4444;
+      --success: #10b981;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +29,6 @@
       line-height: 1.6;
     }
 
-    /* Ambient Glow Element */
     body::before {
       content: '';
       position: fixed;
@@ -121,13 +121,24 @@
     button.btn-logout { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 0.35rem 0.8rem; box-shadow: none; }
     button.btn-logout:hover { background: var(--danger); color: white; }
 
-    /* Auth Screen Center Layout */
     .auth-container { max-width: 420px; margin: 4rem auto; }
     .auth-tabs { display: flex; gap: 10px; margin-bottom: 1rem; }
     .auth-tab-btn { flex: 1; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text-muted); box-shadow: none; }
     .auth-tab-btn.active { background: var(--accent-blue); color: white; }
 
-    /* Modern Table Styles */
+    .section-pills { display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1rem; padding-bottom: 0.5rem; }
+    .pill {
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      padding: 0.5rem 1.2rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--text-muted);
+    }
+    .pill.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+
     .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--card-border); margin-top: 1rem; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th { background: #182234; color: var(--accent-blue); padding: 0.85rem 1rem; font-size: 0.85rem; text-transform: uppercase; }
@@ -153,7 +164,7 @@
 
 <main>
 
-  <!-- AUTHENTICATION CARD -->
+  <!-- AUTHENTICATION SCREEN -->
   <div id="authScreen" class="auth-container">
     <div class="card">
       <div class="auth-tabs">
@@ -161,7 +172,6 @@
         <button id="tabRegisterBtn" class="auth-tab-btn" onclick="switchAuthTab('register')">Register</button>
       </div>
 
-      <!-- Login Form -->
       <form id="loginForm" onsubmit="handleLogin(event)">
         <h3>Welcome Back</h3>
         <p>Sign in to access your portal.</p>
@@ -170,11 +180,10 @@
         <button type="submit" style="width: 100%;">Sign In</button>
       </form>
 
-      <!-- Register Form -->
       <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
         <h3>Create Account</h3>
         <p>Register as a new student or teacher.</p>
-        <input type="text" id="regFullName" placeholder="Full Name (e.g. John Doe)" required>
+        <input type="text" id="regFullName" placeholder="Full Name (e.g. Prof. Davis)" required>
         <input type="text" id="regUsername" placeholder="Choose Username" required>
         <input type="password" id="regPassword" placeholder="Choose Password" required>
         <label style="font-size: 0.8rem; color: var(--text-muted);">Account Role:</label>
@@ -187,33 +196,79 @@
     </div>
   </div>
 
-  <!-- DASHBOARD MAIN CONTENT (Shown after login) -->
+  <!-- DASHBOARD MAIN CONTENT -->
   <div id="dashboard" class="hidden">
 
-    <!-- TEACHER CONTROLS -->
+    <!-- STUDENT ENROLLMENT SCREEN (STUDENT ONLY) -->
+    <div id="studentEnrollCard" class="card hidden">
+      <h3>Classroom Enrollment</h3>
+      <p>Select your teacher and section to enroll yourself into the official class list.</p>
+      <label style="font-size: 0.8rem; color: var(--text-muted);">Select Teacher:</label>
+      <select id="enrollTeacherSelect" onchange="populateSectionEnrollDropdown()">
+        <option value="">-- Choose Teacher --</option>
+      </select>
+      
+      <label style="font-size: 0.8rem; color: var(--text-muted);">Select Section:</label>
+      <select id="enrollSectionSelect">
+        <option value="">-- Choose Section --</option>
+      </select>
+      
+      <button onclick="enrollStudent()">Enroll into Section</button>
+      <div id="enrollmentStatus" style="margin-top: 1rem; font-size: 0.9rem;"></div>
+    </div>
+
+    <!-- TEACHER CONTROLS (TEACHER ONLY) -->
     <div id="teacherControls" class="hidden">
+      
+      <!-- Personalized Invite Link Card -->
+      <div class="card" style="border-left: 4px solid var(--accent-blue);">
+        <h3>Personalized Student Invite Link</h3>
+        <p>Send this link to your students. It will automatically direct them to enroll under your account.</p>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="inviteLinkInput" readonly style="margin: 0;">
+          <button onclick="copyInviteLink()">Copy Invite Link</button>
+        </div>
+      </div>
+
+      <!-- Add Section Card -->
       <div class="card">
-        <h3>1. Upload Student Grades (CSV)</h3>
-        <p>Select a CSV file with format: <b>Name, Section, Quiz1, Midterm, Final</b></p>
-        <input type="file" id="csvFileInput" accept=".csv">
-        <button onclick="processCSV()">Upload and Update Gradebook</button>
+        <h3>Section Management</h3>
+        <p>Add new sections to organize your class rosters.</p>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="newSectionInput" placeholder="New Section Name (e.g., Section 10-C)" style="margin: 0;">
+          <button onclick="createSection()">Add Section</button>
+        </div>
       </div>
 
       <div class="card">
-        <h3>2. Publish Quiz (Google Forms) or Docs</h3>
-        <input type="text" id="postTitle" placeholder="Title (e.g. Unit 1 Quiz)">
+        <h3>1. Upload Section Grades (CSV)</h3>
+        <p>Upload a CSV file for a section. Format: <b>Name, Section, Quiz1, Midterm, Final</b></p>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Target Section:</label>
+        <select id="csvTargetSection"></select>
+        <input type="file" id="csvFileInput" accept=".csv">
+        <button onclick="processCSV()">Upload Gradebook</button>
+      </div>
+
+      <div class="card">
+        <h3>2. Publish Quiz (Google Forms) or Materials</h3>
+        <input type="text" id="postTitle" placeholder="Title (e.g. Midterm Quiz)">
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Target Section:</label>
+        <select id="postTargetSection"></select>
         <select id="postType">
           <option value="quiz">Quiz (Google Form Embed)</option>
           <option value="doc">Assignment (Google Doc Embed)</option>
         </select>
         <textarea id="postContent" placeholder="Instructions for students..."></textarea>
-        <input type="url" id="embedUrl" placeholder="Paste Google Form or Google Doc Share/Embed Link">
+        <input type="url" id="embedUrl" placeholder="Paste Google Form or Google Doc Link">
         <button onclick="addPost()">Publish Post</button>
       </div>
 
       <div class="card">
         <h3>3. Random Group Generator</h3>
-        <textarea id="studentListInput" placeholder="Enter student names separated by commas (Auto-filled from CSV upload)"></textarea>
+        <p>Generate groups using enrolled students from a section.</p>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Target Section:</label>
+        <select id="groupTargetSection" onchange="loadSectionStudentsForGroups()"></select>
+        <textarea id="studentListInput" placeholder="Enrolled students will auto-populate here..."></textarea>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div>
             <select id="groupMode">
@@ -230,7 +285,29 @@
       </div>
     </div>
 
-    <!-- CLASS STREAM & QUIZZES (Visible to both Roles) -->
+    <!-- SECTION ROSTER VIEW -->
+    <div class="card">
+      <h3>Classroom Sections & Roster</h3>
+      <p id="sectionOverviewSubtitle">View enrolled students and class sections.</p>
+      <div id="sectionPillsContainer" class="section-pills"></div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student Name</th>
+              <th>Enrolled Section</th>
+            </tr>
+          </thead>
+          <tbody id="rosterTableBody">
+            <tr><td colspan="3" style="color: var(--text-muted);">Select a section pill above to view enrolled students.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CLASS STREAM & QUIZZES -->
     <div class="card">
       <h3>Class Stream & Quizzes</h3>
       <div id="streamContainer" style="margin-top: 1rem;">
@@ -242,11 +319,11 @@
     <div class="card">
       <h3>Gradebook / Tracked Scores</h3>
       <div class="table-wrapper">
-        <table id="gradesTable">
-          <thead id="tableHeader">
+        <table>
+          <thead id="gradeTableHeader">
             <tr><th>No grades available yet.</th></tr>
           </thead>
-          <tbody id="tableBody"></tbody>
+          <tbody id="gradeTableBody"></tbody>
         </table>
       </div>
     </div>
@@ -256,15 +333,13 @@
 </main>
 
 <script>
-  // App State Initialization
   let users = JSON.parse(localStorage.getItem('ch_users')) || [
-    { username: 'teacher', password: '123', name: 'Admin Teacher', role: 'teacher' }
+    { username: 'teacher', password: '123', name: 'Prof. Davis', role: 'teacher' }
   ];
   let currentUser = JSON.parse(localStorage.getItem('ch_active_user')) || null;
-  let parsedGradesData = JSON.parse(localStorage.getItem('ch_grades')) || [];
-  let posts = JSON.parse(localStorage.getItem('ch_posts')) || [];
+  let teacherData = JSON.parse(localStorage.getItem('ch_teacher_data')) || {};
+  let activeSection = null;
 
-  // Initialize UI on load
   window.onload = function() {
     if (currentUser) {
       showDashboard();
@@ -273,7 +348,23 @@
     }
   };
 
-  // Auth Switcher
+  function getTeacherStore(teacherUsername) {
+    if (!teacherData[teacherUsername]) {
+      teacherData[teacherUsername] = {
+        sections: ['Section A', 'Section B'],
+        enrollments: [],
+        grades: {},
+        posts: []
+      };
+      saveTeacherData();
+    }
+    return teacherData[teacherUsername];
+  }
+
+  function saveTeacherData() {
+    localStorage.setItem('ch_teacher_data', JSON.stringify(teacherData));
+  }
+
   function switchAuthTab(tab) {
     document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
     document.getElementById('tabRegisterBtn').classList.toggle('active', tab === 'register');
@@ -288,14 +379,14 @@
     const password = document.getElementById('regPassword').value;
     const role = document.getElementById('regRole').value;
 
-    if (users.find(u => u.username === username)) {
-      return alert('Username already taken. Please choose another.');
-    }
+    if (users.find(u => u.username === username)) return alert('Username already taken.');
 
     users.push({ username, password, name, role });
     localStorage.setItem('ch_users', JSON.stringify(users));
-    alert('Account created! Logging you in...');
-    
+
+    if (role === 'teacher') getTeacherStore(username);
+
+    alert('Account created!');
     loginUser(username, password);
   }
 
@@ -304,9 +395,7 @@
     const username = document.getElementById('loginUsername').value.trim().toLowerCase();
     const password = document.getElementById('loginPassword').value;
 
-    if (!loginUser(username, password)) {
-      alert('Invalid username or password.');
-    }
+    if (!loginUser(username, password)) alert('Invalid username or password.');
   }
 
   function loginUser(username, password) {
@@ -337,81 +426,298 @@
     document.getElementById('navUserArea').classList.remove('hidden');
     document.getElementById('currentUserText').innerText = `${currentUser.name} (${currentUser.role.toUpperCase()})`;
 
-    // Enforce Role View Controls
     if (currentUser.role === 'teacher') {
       document.getElementById('teacherControls').classList.remove('hidden');
-      renderTable(parsedGradesData);
+      document.getElementById('studentEnrollCard').classList.add('hidden');
+      setupTeacherDashboard();
     } else {
       document.getElementById('teacherControls').classList.add('hidden');
-      renderStudentSpecificGrade();
+      document.getElementById('studentEnrollCard').classList.remove('hidden');
+      setupStudentDashboard();
     }
-
-    renderPosts();
   }
 
-  // Grade Handling
+  // Teacher Specific Functions
+  function setupTeacherDashboard() {
+    const store = getTeacherStore(currentUser.username);
+    
+    // Generate Invite Link
+    const baseUrl = window.location.origin + window.location.pathname;
+    const personalizedUrl = `${baseUrl}?teacher=${encodeURIComponent(currentUser.username)}`;
+    document.getElementById('inviteLinkInput').value = personalizedUrl;
+
+    populateSectionDropdowns(store.sections);
+    renderSectionPills(store.sections);
+    if (store.sections.length > 0) selectSection(store.sections[0]);
+    renderPosts();
+    renderGradesTable();
+  }
+
+  function copyInviteLink() {
+    const input = document.getElementById('inviteLinkInput');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert('Personalized invite link copied to clipboard!');
+  }
+
+  function createSection() {
+    const name = document.getElementById('newSectionInput').value.trim();
+    if (!name) return alert('Enter section name.');
+
+    const store = getTeacherStore(currentUser.username);
+    if (store.sections.includes(name)) return alert('Section already exists.');
+
+    store.sections.push(name);
+    saveTeacherData();
+    document.getElementById('newSectionInput').value = '';
+
+    setupTeacherDashboard();
+  }
+
+  function populateSectionDropdowns(sections) {
+    const targets = ['csvTargetSection', 'postTargetSection', 'groupTargetSection'];
+    targets.forEach(id => {
+      const el = document.getElementById(id);
+      el.innerHTML = sections.map(s => `<option value="${s}">${s}</option>`).join('');
+    });
+  }
+
+  function renderSectionPills(sections) {
+    const container = document.getElementById('sectionPillsContainer');
+    container.innerHTML = sections.map(s => `
+      <button class="pill ${s === activeSection ? 'active' : ''}" onclick="selectSection('${s}')">${s}</button>
+    `).join('');
+  }
+
+  function selectSection(sectionName) {
+    activeSection = sectionName;
+    const store = currentUser.role === 'teacher' ? getTeacherStore(currentUser.username) : getStudentEnrolledStore();
+
+    if (store) renderSectionPills(store.sections);
+    renderRosterTable();
+    loadSectionStudentsForGroups();
+  }
+
+  function renderRosterTable() {
+    const tbody = document.getElementById('rosterTableBody');
+    if (!activeSection) {
+      tbody.innerHTML = `<tr><td colspan="3">No section selected.</td></tr>`;
+      return;
+    }
+
+    const store = currentUser.role === 'teacher' ? getTeacherStore(currentUser.username) : getStudentEnrolledStore();
+    if (!store) return;
+
+    const enrolledInSec = store.enrollments.filter(e => e.section === activeSection);
+
+    if (enrolledInSec.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3" style="color: var(--text-muted);">No students enrolled in ${activeSection} yet.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = enrolledInSec.map((st, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${st.studentName}</td>
+        <td><span style="color: var(--success); font-weight: 600;">${st.section}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  // Student Workspace & Link Pre-selection
+  function setupStudentDashboard() {
+    const teachers = users.filter(u => u.role === 'teacher');
+    const teacherSelect = document.getElementById('enrollTeacherSelect');
+    teacherSelect.innerHTML = '<option value="">-- Choose Teacher --</option>' + 
+      teachers.map(t => `<option value="${t.username}">${t.name}</option>`).join('');
+
+    // Check URL parameters for personalized link pre-selection
+    const urlParams = new URLSearchParams(window.location.search);
+    const teacherParam = urlParams.get('teacher');
+    
+    if (teacherParam && teachers.some(t => t.username === teacherParam)) {
+      teacherSelect.value = teacherParam;
+      populateSectionEnrollDropdown();
+    }
+
+    updateStudentEnrollmentStatus();
+    renderStudentView();
+  }
+
+  function populateSectionEnrollDropdown() {
+    const teacherUsername = document.getElementById('enrollTeacherSelect').value;
+    const secSelect = document.getElementById('enrollSectionSelect');
+
+    if (!teacherUsername) {
+      secSelect.innerHTML = '<option value="">-- Choose Section --</option>';
+      return;
+    }
+
+    const store = getTeacherStore(teacherUsername);
+    secSelect.innerHTML = store.sections.map(s => `<option value="${s}">${s}</option>`).join('');
+  }
+
+  function enrollStudent() {
+    const teacherUsername = document.getElementById('enrollTeacherSelect').value;
+    const section = document.getElementById('enrollSectionSelect').value;
+
+    if (!teacherUsername || !section) return alert('Select both a teacher and a section.');
+
+    const store = getTeacherStore(teacherUsername);
+    const existing = store.enrollments.find(e => e.studentUsername === currentUser.username);
+
+    if (existing) {
+      existing.section = section;
+      existing.studentName = currentUser.name;
+    } else {
+      store.enrollments.push({
+        studentName: currentUser.name,
+        studentUsername: currentUser.username,
+        section
+      });
+    }
+
+    saveTeacherData();
+    updateStudentEnrollmentStatus();
+    renderStudentView();
+    alert(`Successfully enrolled into ${section}!`);
+  }
+
+  function updateStudentEnrollmentStatus() {
+    const statusDiv = document.getElementById('enrollmentStatus');
+    const enrolledObj = getStudentEnrolledStore();
+
+    if (enrolledObj) {
+      const record = enrolledObj.store.enrollments.find(e => e.studentUsername === currentUser.username);
+      statusDiv.innerHTML = `<span style="color: var(--success);">Enrolled under <b>${enrolledObj.teacherName}</b> in <b>${record.section}</b></span>`;
+    } else {
+      statusDiv.innerHTML = `<span style="color: var(--text-muted);">You are not enrolled in any class yet.</span>`;
+    }
+  }
+
+  function getStudentEnrolledStore() {
+    for (let teacherUsername in teacherData) {
+      const store = teacherData[teacherUsername];
+      const found = store.enrollments.find(e => e.studentUsername === currentUser.username);
+      if (found) {
+        const teacher = users.find(u => u.username === teacherUsername);
+        return { store, teacherName: teacher ? teacher.name : teacherUsername, enrollment: found, sections: store.sections };
+      }
+    }
+    return null;
+  }
+
+  function renderStudentView() {
+    const enrolledObj = getStudentEnrolledStore();
+    if (!enrolledObj) {
+      document.getElementById('sectionPillsContainer').innerHTML = '';
+      document.getElementById('streamContainer').innerHTML = '<p style="color: var(--text-muted);">Enroll into a section to view posts.</p>';
+      return;
+    }
+
+    renderSectionPills(enrolledObj.sections);
+    selectSection(enrolledObj.enrollment.section);
+    renderPostsForStudent(enrolledObj.store, enrolledObj.enrollment.section);
+    renderGradesForStudent(enrolledObj.store, enrolledObj.enrollment.section);
+  }
+
+  // Features Logic: Posts, CSV Grades, Groups
   function processCSV() {
+    const section = document.getElementById('csvTargetSection').value;
     const file = document.getElementById('csvFileInput').files[0];
-    if (!file) return alert('Please select a CSV file.');
+    if (!file) return alert('Select a CSV file.');
 
     const reader = new FileReader();
     reader.onload = function(e) {
       const lines = e.target.result.split('\n').filter(l => l.trim() !== '');
-      parsedGradesData = lines.map(line => line.split(',').map(cell => cell.trim()));
+      const parsed = lines.map(line => line.split(',').map(cell => cell.trim()));
       
-      localStorage.setItem('ch_grades', JSON.stringify(parsedGradesData));
-      renderTable(parsedGradesData);
+      const store = getTeacherStore(currentUser.username);
+      store.grades[section] = parsed;
+      saveTeacherData();
 
-      const names = parsedGradesData.slice(1).map(row => row[0]).filter(Boolean);
-      document.getElementById('studentListInput').value = names.join(', ');
-
-      alert('Gradebook saved and updated!');
+      renderGradesTable();
+      alert(`Grades updated for ${section}!`);
     };
     reader.readAsText(file);
   }
 
-  function renderTable(data) {
-    if (!data || data.length === 0) return;
-    document.getElementById('tableHeader').innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join('')}</tr>`;
-    document.getElementById('tableBody').innerHTML = data.slice(1).map(row => `
+  function renderGradesTable() {
+    const store = getTeacherStore(currentUser.username);
+    const data = store.grades[activeSection];
+
+    const head = document.getElementById('gradeTableHeader');
+    const body = document.getElementById('gradeTableBody');
+
+    if (!data) {
+      head.innerHTML = `<tr><th>No grades uploaded for ${activeSection || 'this section'}.</th></tr>`;
+      body.innerHTML = '';
+      return;
+    }
+
+    head.innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join('')}</tr>`;
+    body.innerHTML = data.slice(1).map(row => `
       <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
     `).join('');
   }
 
-  function renderStudentSpecificGrade() {
-    if (!parsedGradesData || parsedGradesData.length === 0) return;
-    const headers = parsedGradesData[0];
-    const studentRow = parsedGradesData.slice(1).find(row => row[0].toLowerCase().includes(currentUser.name.toLowerCase()));
+  function renderGradesForStudent(store, section) {
+    const data = store.grades[section];
+    const head = document.getElementById('gradeTableHeader');
+    const body = document.getElementById('gradeTableBody');
 
-    if (studentRow) {
-      renderTable([headers, studentRow]);
+    if (!data) {
+      head.innerHTML = `<tr><th>No grade records for this section yet.</th></tr>`;
+      body.innerHTML = '';
+      return;
+    }
+
+    const headers = data[0];
+    const row = data.slice(1).find(r => r[0].toLowerCase().includes(currentUser.name.toLowerCase()));
+
+    head.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+    if (row) {
+      body.innerHTML = `<tr>${row.map(c => `<td>${c}</td>`).join('')}</tr>`;
     } else {
-      document.getElementById('tableHeader').innerHTML = `<tr><th>Student Record</th></tr>`;
-      document.getElementById('tableBody').innerHTML = `<tr><td>No grade records found for account name: "${currentUser.name}".</td></tr>`;
+      body.innerHTML = `<tr><td colspan="${headers.length}">No grade row found matching "${currentUser.name}".</td></tr>`;
     }
   }
 
-  // Posts & Assignments
   function addPost() {
     const title = document.getElementById('postTitle').value;
+    const section = document.getElementById('postTargetSection').value;
     const type = document.getElementById('postType').value;
     const content = document.getElementById('postContent').value;
     const url = document.getElementById('embedUrl').value;
 
-    if (!title) return alert('Post title required.');
+    if (!title) return alert('Enter title.');
 
-    posts.unshift({ title, type, content, url });
-    localStorage.setItem('ch_posts', JSON.stringify(posts));
+    const store = getTeacherStore(currentUser.username);
+    store.posts.unshift({ title, section, type, content, url });
+    saveTeacherData();
+
     renderPosts();
   }
 
   function renderPosts() {
-    const container = document.getElementById('streamContainer');
-    if (posts.length === 0) return;
+    const store = getTeacherStore(currentUser.username);
+    renderPostsList(store.posts.filter(p => p.section === activeSection));
+  }
 
-    container.innerHTML = posts.map(p => `
+  function renderPostsForStudent(store, section) {
+    renderPostsList(store.posts.filter(p => p.section === section));
+  }
+
+  function renderPostsList(postsList) {
+    const container = document.getElementById('streamContainer');
+    if (!postsList || postsList.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-muted);">No posts available for this section.</p>';
+      return;
+    }
+
+    container.innerHTML = postsList.map(p => `
       <div style="border-bottom: 1px solid var(--card-border); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase;">${p.type}</span>
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase;">${p.type} (${p.section})</span>
         <h4 style="font-size: 1.1rem; color: #fff; margin: 0.2rem 0 0.5rem;">${p.title}</h4>
         <p style="color: var(--text-muted); font-size: 0.9rem;">${p.content}</p>
         ${p.url ? `<iframe src="${p.url}"></iframe>` : ''}
@@ -419,16 +725,24 @@
     `).join('');
   }
 
-  // Random Group Generator
+  function loadSectionStudentsForGroups() {
+    if (currentUser.role !== 'teacher') return;
+    const targetSection = document.getElementById('groupTargetSection').value || activeSection;
+    const store = getTeacherStore(currentUser.username);
+    const names = store.enrollments.filter(e => e.section === targetSection).map(e => e.studentName);
+    
+    document.getElementById('studentListInput').value = names.join(', ');
+  }
+
   function generateGroups() {
     const input = document.getElementById('studentListInput').value;
-    if (!input) return alert('Enter student names or upload CSV first.');
+    if (!input) return alert('No students found to generate groups.');
 
     let students = input.split(',').map(s => s.trim()).filter(Boolean);
     const mode = document.getElementById('groupMode').value;
     const count = parseInt(document.getElementById('groupCount').value);
 
-    if (!count || count < 1) return alert('Enter a valid count.');
+    if (!count || count < 1) return alert('Enter valid count.');
 
     let shuffled = [...students].sort(() => 0.5 - Math.random());
     let groups = [];
