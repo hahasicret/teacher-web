@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classroom Hub</title>
+  <title>Classroom Hub (No Database Version)</title>
   <style>
     :root { --primary: #1a73e8; --bg: #f8f9fa; --border: #dadce0; }
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); color: #3c4043; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg); color: #3c4043; }
     nav { background: #fff; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
     main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
     .card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
     .hidden { display: none !important; }
-    button { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    button { background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #1557b0; }
     input, select, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; }
+    th { background: #f1f3f4; }
     iframe { width: 100%; height: 450px; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
     .group-box { background: #f1f3f4; border-radius: 6px; padding: 0.75rem; margin-top: 0.5rem; }
   </style>
@@ -21,247 +25,221 @@
 
 <nav>
   <h2>Classroom Hub</h2>
-  <div id="userInfo"></div>
-  <button id="logoutBtn" class="hidden" onclick="logout()">Logout</button>
+  <div>
+    <label><b>Mode:</b> </label>
+    <select id="roleSelect" onchange="switchRole()" style="width: auto; display: inline-block;">
+      <option value="teacher">Teacher (Admin)</option>
+      <option value="student">Student View</option>
+    </select>
+  </div>
 </nav>
 
 <main>
-  <div id="authSection" class="card">
-    <h3>Login / Register</h3>
-    <select id="authMode" onchange="toggleAuthFields()">
-      <option value="login">Login</option>
-      <option value="register">Register</option>
-    </select>
-    <input type="text" id="authName" class="hidden" placeholder="Full Name">
-    <input type="email" id="authEmail" placeholder="Email">
-    <input type="password" id="authPassword" placeholder="Password">
-    <div id="registerFields" class="hidden">
-      <label>Role:</label>
-      <select id="authRole">
-        <option value="student">Student</option>
-        <option value="teacher">Teacher</option>
+
+  <!-- TEACHER CONTROLS -->
+  <div id="teacherView">
+
+    <!-- 1. EXCEL / CSV GRADE UPLOAD -->
+    <div class="card">
+      <h3>1. Upload Student Grades (Excel / CSV)</h3>
+      <p>Upload a `.csv` file with columns: <b>Name, Section, Quiz1, Midterm, Final</b></p>
+      <input type="file" id="csvFileInput" accept=".csv">
+      <button onclick="processCSV()">Upload and Update Gradebook</button>
+    </div>
+
+    <!-- 2. GOOGLE FORMS & DOCS INTEGRATION -->
+    <div class="card">
+      <h3>2. Post Quiz (Google Forms) or Materials (Google Docs/Sheets)</h3>
+      <input type="text" id="postTitle" placeholder="Post Title (e.g., Unit 1 Quiz)">
+      <select id="postType">
+        <option value="quiz">Quiz (Google Form)</option>
+        <option value="doc">Assignment (Google Doc)</option>
+        <option value="sheet">Live Gradebook (Google Sheet Embed)</option>
       </select>
-      <input type="text" id="authSectionInput" placeholder="Section (e.g., Section A)">
+      <textarea id="postContent" placeholder="Instructions for students..."></textarea>
+      <input type="url" id="embedUrl" placeholder="Paste Embed URL / Google Form Share Link">
+      <button onclick="addPost()">Publish Post</button>
     </div>
-    <button onclick="handleAuth()">Submit</button>
-  </div>
 
-  <div id="dashboard" class="hidden">
-    
-    <div id="teacherControls" class="hidden">
-      <div class="card">
-        <h3>Create Post / Assignment / Quiz</h3>
-        <input type="text" id="postTitle" placeholder="Title">
-        <input type="text" id="postSection" placeholder="Target Section (e.g., Section A)">
-        <select id="postType">
-          <option value="announcement">Announcement</option>
-          <option value="quiz">Quiz (Google Form)</option>
-          <option value="assignment">Assignment (Google Doc)</option>
-        </select>
-        <textarea id="postContent" placeholder="Instructions or announcement details..."></textarea>
-        <input type="url" id="googleFormUrl" placeholder="Google Form Embed Link (if Quiz)">
-        <input type="url" id="googleDocUrl" placeholder="Google Doc Embed Link (if Assignment)">
-        <button onclick="createPost()">Publish Post</button>
-      </div>
-
-      <div class="card">
-        <h3>Random Group Generator</h3>
-        <input type="text" id="groupSection" placeholder="Section to Randomize">
+    <!-- 3. RANDOM GROUP GENERATOR -->
+    <div class="card">
+      <h3>3. Random Group Generator</h3>
+      <textarea id="studentListInput" placeholder="Enter student names separated by commas (or upload CSV above first)"></textarea>
+      <div style="display: flex; gap: 10px;">
         <select id="groupMode">
-          <option value="numGroups">Total Number of Groups</option>
-          <option value="perGroup">Students Per Group</option>
+          <option value="numGroups">Number of Groups</option>
+          <option value="perGroup">Students per Group</option>
         </select>
-        <input type="number" id="groupCount" placeholder="Count">
-        <button onclick="generateGroups()">Generate Groups</button>
-        <div id="groupResults"></div>
+        <input type="number" id="groupCount" placeholder="Count (e.g. 4)" min="1">
       </div>
-
-      <div class="card">
-        <h3>Record Student Grade</h3>
-        <select id="gradeStudentSelect"><option>Loading students...</option></select>
-        <input type="text" id="gradeItem" placeholder="Assessment Title (e.g., Midterm Quiz)">
-        <input type="number" id="gradeScore" placeholder="Score Obtained">
-        <input type="number" id="gradeMax" placeholder="Max Score (default 100)" value="100">
-        <button onclick="recordGrade()">Save Grade</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Class Stream & Quizzes</h3>
-      <div id="streamContainer">Loading posts...</div>
-    </div>
-
-    <div class="card">
-      <h3>Gradebook / Tracked Scores</h3>
-      <div id="gradebookContainer"></div>
+      <button onclick="generateGroups()">Randomize Groups</button>
+      <div id="groupResults"></div>
     </div>
 
   </div>
+
+  <!-- SHARED CLASS STREAM & QUIZZES -->
+  <div class="card">
+    <h3>Class Announcements & Quizzes</h3>
+    <div id="streamContainer"><i>No quizzes or posts added yet.</i></div>
+  </div>
+
+  <!-- STUDENT GRADE TRACKER -->
+  <div class="card">
+    <h3>Student Gradebook</h3>
+    <div id="studentSearchArea" class="hidden">
+      <input type="text" id="studentSearchName" placeholder="Enter your Name to search your grades...">
+      <button onclick="searchStudentGrade()">View My Scores</button>
+    </div>
+    
+    <div id="gradeTableWrapper">
+      <table id="gradesTable">
+        <thead id="tableHeader">
+          <tr><th>No grades uploaded yet. Upload a CSV file above.</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <script>
-  let token = localStorage.getItem('token');
-  let role = localStorage.getItem('role');
-  let userSection = localStorage.getItem('section');
+  let parsedGradesData = [];
+  let posts = [];
 
-  if (token) showDashboard();
-
-  function toggleAuthFields() {
-    const isReg = document.getElementById('authMode').value === 'register';
-    document.getElementById('authName').classList.toggle('hidden', !isReg);
-    document.getElementById('registerFields').classList.toggle('hidden', !isReg);
-  }
-
-  async function handleAuth() {
-    const mode = document.getElementById('authMode').value;
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-
-    if (mode === 'register') {
-      const name = document.getElementById('authName').value;
-      const role = document.getElementById('authRole').value;
-      const section = document.getElementById('authSectionInput').value;
-      
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, section })
-      });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error);
-      alert('Registration successful! Please log in.');
-      document.getElementById('authMode').value = 'login';
-      toggleAuthFields();
-    } else {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error);
-
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.role);
-      localStorage.setItem('section', data.section);
-      localStorage.setItem('name', data.name);
-      
-      token = data.token;
-      role = data.role;
-      userSection = data.section;
-      showDashboard();
-    }
-  }
-
-  function showDashboard() {
-    document.getElementById('authSection').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    document.getElementById('logoutBtn').classList.remove('hidden');
-    document.getElementById('userInfo').innerText = `${localStorage.getItem('name')} (${role.toUpperCase()})`;
+  function switchRole() {
+    const role = document.getElementById('roleSelect').value;
+    const teacherView = document.getElementById('teacherView');
+    const studentSearchArea = document.getElementById('studentSearchArea');
 
     if (role === 'teacher') {
-      document.getElementById('teacherControls').classList.remove('hidden');
-      loadTeacherStudents();
+      teacherView.classList.remove('hidden');
+      studentSearchArea.classList.add('hidden');
+      renderTable(parsedGradesData);
+    } else {
+      teacherView.classList.add('hidden');
+      studentSearchArea.classList.remove('hidden');
+      document.getElementById('tableBody').innerHTML = '';
     }
-    loadStream();
-    loadGrades();
   }
 
-  function logout() {
-    localStorage.clear();
-    location.reload();
+  // 1. Process CSV File Upload
+  function processCSV() {
+    const fileInput = document.getElementById('csvFileInput');
+    const file = fileInput.files[0];
+
+    if (!file) return alert('Please select a CSV file first.');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      
+      if (lines.length === 0) return alert('File is empty.');
+
+      parsedGradesData = lines.map(line => line.split(',').map(cell => cell.trim()));
+      renderTable(parsedGradesData);
+
+      // Auto-fill student names for group generator
+      const names = parsedGradesData.slice(1).map(row => row[0]).filter(Boolean);
+      document.getElementById('studentListInput').value = names.join(', ');
+
+      alert('Grades loaded successfully!');
+    };
+    reader.readAsText(file);
   }
 
-  async function createPost() {
+  function renderTable(data) {
+    if (!data || data.length === 0) return;
+
+    const thead = document.getElementById('tableHeader');
+    const tbody = document.getElementById('tableBody');
+
+    // Headers
+    thead.innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+    // Rows
+    tbody.innerHTML = data.slice(1).map(row => `
+      <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
+    `).join('');
+  }
+
+  // 2. Search Individual Grade for Student
+  function searchStudentGrade() {
+    const nameQuery = document.getElementById('studentSearchName').value.toLowerCase().trim();
+    if (!nameQuery) return alert('Please enter your name.');
+    if (parsedGradesData.length === 0) return alert('No grades have been uploaded by the teacher yet.');
+
+    const headers = parsedGradesData[0];
+    const studentRow = parsedGradesData.slice(1).find(row => row[0].toLowerCase().includes(nameQuery));
+
+    const tbody = document.getElementById('tableBody');
+    if (!studentRow) {
+      tbody.innerHTML = `<tr><td colspan="${headers.length}">No records found matching "${nameQuery}".</td></tr>`;
+      return;
+    }
+
+    renderTable([headers, studentRow]);
+  }
+
+  // 3. Post Quizzes / Docs
+  function addPost() {
     const title = document.getElementById('postTitle').value;
-    const section = document.getElementById('postSection').value;
     const type = document.getElementById('postType').value;
     const content = document.getElementById('postContent').value;
-    const googleFormUrl = document.getElementById('googleFormUrl').value;
-    const googleDocUrl = document.getElementById('googleDocUrl').value;
+    const url = document.getElementById('embedUrl').value;
 
-    const res = await fetch('/api/teacher/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ title, section, type, content, googleFormUrl, googleDocUrl })
-    });
-    if (res.ok) { alert('Post created!'); loadStream(); }
+    if (!title) return alert('Please add a title.');
+
+    posts.unshift({ title, type, content, url });
+    renderPosts();
   }
 
-  async function loadStream() {
-    const sec = role === 'teacher' ? (document.getElementById('postSection').value || userSection) : userSection;
-    const res = await fetch(`/api/posts/${sec}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const posts = await res.json();
+  function renderPosts() {
     const container = document.getElementById('streamContainer');
-
-    if (!posts.length) { container.innerHTML = '<p>No posts available for this section.</p>'; return; }
+    if (posts.length === 0) return;
 
     container.innerHTML = posts.map(p => `
       <div style="border-bottom: 1px solid #ddd; padding-bottom: 1rem; margin-bottom: 1rem;">
         <h4>[${p.type.toUpperCase()}] ${p.title}</h4>
         <p>${p.content}</p>
-        ${p.googleFormUrl ? `<iframe src="${p.googleFormUrl}"></iframe>` : ''}
-        ${p.googleDocUrl ? `<iframe src="${p.googleDocUrl}"></iframe>` : ''}
+        ${p.url ? `<iframe src="${p.url}"></iframe>` : ''}
       </div>
     `).join('');
   }
 
-  async function generateGroups() {
-    const section = document.getElementById('groupSection').value;
+  // 4. Random Group Generator
+  function generateGroups() {
+    const input = document.getElementById('studentListInput').value;
+    if (!input) return alert('Please enter student names or upload a CSV file.');
+
+    let students = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
     const mode = document.getElementById('groupMode').value;
-    const count = document.getElementById('groupCount').value;
+    const count = parseInt(document.getElementById('groupCount').value);
 
-    const res = await fetch('/api/teacher/randomize-groups', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ section, mode, count })
-    });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
+    if (!count || count < 1) return alert('Enter a valid count number.');
 
-    document.getElementById('groupResults').innerHTML = data.groups.map((g, i) => `
-      <div class="group-box"><strong>Group ${i + 1}:</strong> ${g.join(', ')}</div>
+    // Shuffle Array
+    let shuffled = [...students].sort(() => 0.5 - Math.random());
+    let groups = [];
+
+    if (mode === 'numGroups') {
+      for (let i = 0; i < count; i++) groups.push([]);
+      shuffled.forEach((student, index) => {
+        groups[index % count].push(student);
+      });
+    } else {
+      while (shuffled.length > 0) {
+        groups.push(shuffled.splice(0, count));
+      }
+    }
+
+    document.getElementById('groupResults').innerHTML = groups.map((g, idx) => `
+      <div class="group-box"><strong>Group ${idx + 1}:</strong> ${g.join(', ')}</div>
     `).join('');
   }
-
-  async function loadTeacherStudents() {
-    const res = await fetch('/api/teacher/students', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const students = await res.json();
-    const select = document.getElementById('gradeStudentSelect');
-    select.innerHTML = students.map(s => `<option value="${s._id}">${s.name} (${s.section})</option>`).join('');
-  }
-
-  async function recordGrade() {
-    const studentId = document.getElementById('gradeStudentSelect').value;
-    const assessmentName = document.getElementById('gradeItem').value;
-    const score = document.getElementById('gradeScore').value;
-    const maxScore = document.getElementById('gradeMax').value;
-
-    const res = await fetch('/api/teacher/grades', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ studentId, assessmentName, score, maxScore })
-    });
-    if (res.ok) alert('Grade recorded!');
-  }
-
-  async function loadGrades() {
-    if (role === 'student') {
-      const res = await fetch('/api/student/my-grades', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const grades = await res.json();
-      const container = document.getElementById('gradebookContainer');
-      if (!grades.length) { container.innerHTML = 'No grades recorded yet.'; return; }
-      container.innerHTML = grades.map(g => `<p><b>${g.assessmentName}:</b> ${g.score} / ${g.maxScore}</p>`).join('');
-    } else {
-      document.getElementById('gradebookContainer').innerHTML = 'Use the input panel above to issue and publish new grades for enrolled students.';
-    }
-  }
 </script>
+
 </body>
 </html>
