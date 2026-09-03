@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Hub</title>
+  <style>
+    :root { --primary: #1a73e8; --bg: #f8f9fa; --border: #dadce0; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); color: #3c4043; }
+    nav { background: #fff; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .hidden { display: none !important; }
+    button { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    input, select, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+    iframe { width: 100%; height: 450px; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
+    .group-box { background: #f1f3f4; border-radius: 6px; padding: 0.75rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <h2>Classroom Hub</h2>
+  <div id="userInfo"></div>
+  <button id="logoutBtn" class="hidden" onclick="logout()">Logout</button>
+</nav>
+
+<main>
+  <div id="authSection" class="card">
+    <h3>Login / Register</h3>
+    <select id="authMode" onchange="toggleAuthFields()">
+      <option value="login">Login</option>
+      <option value="register">Register</option>
+    </select>
+    <input type="text" id="authName" class="hidden" placeholder="Full Name">
+    <input type="email" id="authEmail" placeholder="Email">
+    <input type="password" id="authPassword" placeholder="Password">
+    <div id="registerFields" class="hidden">
+      <label>Role:</label>
+      <select id="authRole">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+      <input type="text" id="authSectionInput" placeholder="Section (e.g., Section A)">
+    </div>
+    <button onclick="handleAuth()">Submit</button>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    
+    <div id="teacherControls" class="hidden">
+      <div class="card">
+        <h3>Create Post / Assignment / Quiz</h3>
+        <input type="text" id="postTitle" placeholder="Title">
+        <input type="text" id="postSection" placeholder="Target Section (e.g., Section A)">
+        <select id="postType">
+          <option value="announcement">Announcement</option>
+          <option value="quiz">Quiz (Google Form)</option>
+          <option value="assignment">Assignment (Google Doc)</option>
+        </select>
+        <textarea id="postContent" placeholder="Instructions or announcement details..."></textarea>
+        <input type="url" id="googleFormUrl" placeholder="Google Form Embed Link (if Quiz)">
+        <input type="url" id="googleDocUrl" placeholder="Google Doc Embed Link (if Assignment)">
+        <button onclick="createPost()">Publish Post</button>
+      </div>
+
+      <div class="card">
+        <h3>Random Group Generator</h3>
+        <input type="text" id="groupSection" placeholder="Section to Randomize">
+        <select id="groupMode">
+          <option value="numGroups">Total Number of Groups</option>
+          <option value="perGroup">Students Per Group</option>
+        </select>
+        <input type="number" id="groupCount" placeholder="Count">
+        <button onclick="generateGroups()">Generate Groups</button>
+        <div id="groupResults"></div>
+      </div>
+
+      <div class="card">
+        <h3>Record Student Grade</h3>
+        <select id="gradeStudentSelect"><option>Loading students...</option></select>
+        <input type="text" id="gradeItem" placeholder="Assessment Title (e.g., Midterm Quiz)">
+        <input type="number" id="gradeScore" placeholder="Score Obtained">
+        <input type="number" id="gradeMax" placeholder="Max Score (default 100)" value="100">
+        <button onclick="recordGrade()">Save Grade</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Class Stream & Quizzes</h3>
+      <div id="streamContainer">Loading posts...</div>
+    </div>
+
+    <div class="card">
+      <h3>Gradebook / Tracked Scores</h3>
+      <div id="gradebookContainer"></div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  let token = localStorage.getItem('token');
+  let role = localStorage.getItem('role');
+  let userSection = localStorage.getItem('section');
+
+  if (token) showDashboard();
+
+  function toggleAuthFields() {
+    const isReg = document.getElementById('authMode').value === 'register';
+    document.getElementById('authName').classList.toggle('hidden', !isReg);
+    document.getElementById('registerFields').classList.toggle('hidden', !isReg);
+  }
+
+  async function handleAuth() {
+    const mode = document.getElementById('authMode').value;
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+
+    if (mode === 'register') {
+      const name = document.getElementById('authName').value;
+      const role = document.getElementById('authRole').value;
+      const section = document.getElementById('authSectionInput').value;
+      
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role, section })
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error);
+      alert('Registration successful! Please log in.');
+      document.getElementById('authMode').value = 'login';
+      toggleAuthFields();
+    } else {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error);
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('section', data.section);
+      localStorage.setItem('name', data.name);
+      
+      token = data.token;
+      role = data.role;
+      userSection = data.section;
+      showDashboard();
+    }
+  }
+
+  function showDashboard() {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('logoutBtn').classList.remove('hidden');
+    document.getElementById('userInfo').innerText = `${localStorage.getItem('name')} (${role.toUpperCase()})`;
+
+    if (role === 'teacher') {
+      document.getElementById('teacherControls').classList.remove('hidden');
+      loadTeacherStudents();
+    }
+    loadStream();
+    loadGrades();
+  }
+
+  function logout() {
+    localStorage.clear();
+    location.reload();
+  }
+
+  async function createPost() {
+    const title = document.getElementById('postTitle').value;
+    const section = document.getElementById('postSection').value;
+    const type = document.getElementById('postType').value;
+    const content = document.getElementById('postContent').value;
+    const googleFormUrl = document.getElementById('googleFormUrl').value;
+    const googleDocUrl = document.getElementById('googleDocUrl').value;
+
+    const res = await fetch('/api/teacher/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ title, section, type, content, googleFormUrl, googleDocUrl })
+    });
+    if (res.ok) { alert('Post created!'); loadStream(); }
+  }
+
+  async function loadStream() {
+    const sec = role === 'teacher' ? (document.getElementById('postSection').value || userSection) : userSection;
+    const res = await fetch(`/api/posts/${sec}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const posts = await res.json();
+    const container = document.getElementById('streamContainer');
+
+    if (!posts.length) { container.innerHTML = '<p>No posts available for this section.</p>'; return; }
+
+    container.innerHTML = posts.map(p => `
+      <div style="border-bottom: 1px solid #ddd; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h4>[${p.type.toUpperCase()}] ${p.title}</h4>
+        <p>${p.content}</p>
+        ${p.googleFormUrl ? `<iframe src="${p.googleFormUrl}"></iframe>` : ''}
+        ${p.googleDocUrl ? `<iframe src="${p.googleDocUrl}"></iframe>` : ''}
+      </div>
+    `).join('');
+  }
+
+  async function generateGroups() {
+    const section = document.getElementById('groupSection').value;
+    const mode = document.getElementById('groupMode').value;
+    const count = document.getElementById('groupCount').value;
+
+    const res = await fetch('/api/teacher/randomize-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ section, mode, count })
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error);
+
+    document.getElementById('groupResults').innerHTML = data.groups.map((g, i) => `
+      <div class="group-box"><strong>Group ${i + 1}:</strong> ${g.join(', ')}</div>
+    `).join('');
+  }
+
+  async function loadTeacherStudents() {
+    const res = await fetch('/api/teacher/students', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const students = await res.json();
+    const select = document.getElementById('gradeStudentSelect');
+    select.innerHTML = students.map(s => `<option value="${s._id}">${s.name} (${s.section})</option>`).join('');
+  }
+
+  async function recordGrade() {
+    const studentId = document.getElementById('gradeStudentSelect').value;
+    const assessmentName = document.getElementById('gradeItem').value;
+    const score = document.getElementById('gradeScore').value;
+    const maxScore = document.getElementById('gradeMax').value;
+
+    const res = await fetch('/api/teacher/grades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ studentId, assessmentName, score, maxScore })
+    });
+    if (res.ok) alert('Grade recorded!');
+  }
+
+  async function loadGrades() {
+    if (role === 'student') {
+      const res = await fetch('/api/student/my-grades', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const grades = await res.json();
+      const container = document.getElementById('gradebookContainer');
+      if (!grades.length) { container.innerHTML = 'No grades recorded yet.'; return; }
+      container.innerHTML = grades.map(g => `<p><b>${g.assessmentName}:</b> ${g.score} / ${g.maxScore}</p>`).join('');
+    } else {
+      document.getElementById('gradebookContainer').innerHTML = 'Use the input panel above to issue and publish new grades for enrolled students.';
+    }
+  }
+</script>
+</body>
+</html>
