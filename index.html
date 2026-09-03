@@ -3,196 +3,405 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classroom Hub (No Database Version)</title>
+  <title>Classroom Hub | Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --primary: #1a73e8; --bg: #f8f9fa; --border: #dadce0; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg); color: #3c4043; }
-    nav { background: #fff; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-    .card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    :root {
+      --bg-dark: #0a0e17;
+      --card-bg: #121824;
+      --card-border: #1e293b;
+      --accent-blue: #0088ff;
+      --accent-glow: rgba(0, 136, 255, 0.35);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --input-bg: #0b111e;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Ambient Glow Element */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0, 136, 255, 0.15) 0%, rgba(10, 14, 23, 0) 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    nav {
+      background: rgba(18, 24, 36, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand { display: flex; align-items: center; gap: 0.75rem; }
+    .brand-logo { width: 12px; height: 12px; background: var(--accent-blue); border-radius: 50%; box-shadow: 0 0 12px var(--accent-blue); }
+    .brand h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--input-bg);
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      font-size: 0.85rem;
+    }
+
+    select, input, textarea {
+      background-color: var(--input-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      width: 100%;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    main { max-width: 1000px; margin: 2.5rem auto; padding: 0 1.5rem; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #fff; }
+    .card p { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+    button {
+      background: linear-gradient(135deg, #0088ff 0%, #0055ff 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--accent-glow);
+      transition: all 0.2s ease;
+    }
+
+    button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 136, 255, 0.5); }
+    button.btn-logout { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 0.35rem 0.8rem; box-shadow: none; }
+    button.btn-logout:hover { background: var(--danger); color: white; }
+
+    /* Auth Screen Center Layout */
+    .auth-container { max-width: 420px; margin: 4rem auto; }
+    .auth-tabs { display: flex; gap: 10px; margin-bottom: 1rem; }
+    .auth-tab-btn { flex: 1; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text-muted); box-shadow: none; }
+    .auth-tab-btn.active { background: var(--accent-blue); color: white; }
+
+    /* Modern Table Styles */
+    .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--card-border); margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #182234; color: var(--accent-blue); padding: 0.85rem 1rem; font-size: 0.85rem; text-transform: uppercase; }
+    td { padding: 0.85rem 1rem; border-top: 1px solid var(--card-border); font-size: 0.9rem; }
+
+    iframe { width: 100%; height: 480px; border: 1px solid var(--card-border); border-radius: 8px; margin-top: 1rem; background: #fff; }
+    .group-box { background: var(--input-bg); border: 1px solid var(--card-border); border-left: 3px solid var(--accent-blue); border-radius: 6px; padding: 1rem; margin-top: 0.75rem; }
     .hidden { display: none !important; }
-    button { background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    button:hover { background: #1557b0; }
-    input, select, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; }
-    th { background: #f1f3f4; }
-    iframe { width: 100%; height: 450px; border: 1px solid var(--border); border-radius: 4px; margin-top: 1rem; }
-    .group-box { background: #f1f3f4; border-radius: 6px; padding: 0.75rem; margin-top: 0.5rem; }
   </style>
 </head>
 <body>
 
 <nav>
-  <h2>Classroom Hub</h2>
-  <div>
-    <label><b>Mode:</b> </label>
-    <select id="roleSelect" onchange="switchRole()" style="width: auto; display: inline-block;">
-      <option value="teacher">Teacher (Admin)</option>
-      <option value="student">Student View</option>
-    </select>
+  <div class="brand">
+    <div class="brand-logo"></div>
+    <h2>Classroom Hub</h2>
+  </div>
+  <div id="navUserArea" class="user-badge hidden">
+    <span id="currentUserText">Logged in as: User</span>
+    <button class="btn-logout" onclick="logout()">Logout</button>
   </div>
 </nav>
 
 <main>
 
-  <!-- TEACHER CONTROLS -->
-  <div id="teacherView">
-
-    <!-- 1. EXCEL / CSV GRADE UPLOAD -->
+  <!-- AUTHENTICATION CARD -->
+  <div id="authScreen" class="auth-container">
     <div class="card">
-      <h3>1. Upload Student Grades (Excel / CSV)</h3>
-      <p>Upload a `.csv` file with columns: <b>Name, Section, Quiz1, Midterm, Final</b></p>
-      <input type="file" id="csvFileInput" accept=".csv">
-      <button onclick="processCSV()">Upload and Update Gradebook</button>
-    </div>
-
-    <!-- 2. GOOGLE FORMS & DOCS INTEGRATION -->
-    <div class="card">
-      <h3>2. Post Quiz (Google Forms) or Materials (Google Docs/Sheets)</h3>
-      <input type="text" id="postTitle" placeholder="Post Title (e.g., Unit 1 Quiz)">
-      <select id="postType">
-        <option value="quiz">Quiz (Google Form)</option>
-        <option value="doc">Assignment (Google Doc)</option>
-        <option value="sheet">Live Gradebook (Google Sheet Embed)</option>
-      </select>
-      <textarea id="postContent" placeholder="Instructions for students..."></textarea>
-      <input type="url" id="embedUrl" placeholder="Paste Embed URL / Google Form Share Link">
-      <button onclick="addPost()">Publish Post</button>
-    </div>
-
-    <!-- 3. RANDOM GROUP GENERATOR -->
-    <div class="card">
-      <h3>3. Random Group Generator</h3>
-      <textarea id="studentListInput" placeholder="Enter student names separated by commas (or upload CSV above first)"></textarea>
-      <div style="display: flex; gap: 10px;">
-        <select id="groupMode">
-          <option value="numGroups">Number of Groups</option>
-          <option value="perGroup">Students per Group</option>
-        </select>
-        <input type="number" id="groupCount" placeholder="Count (e.g. 4)" min="1">
+      <div class="auth-tabs">
+        <button id="tabLoginBtn" class="auth-tab-btn active" onclick="switchAuthTab('login')">Login</button>
+        <button id="tabRegisterBtn" class="auth-tab-btn" onclick="switchAuthTab('register')">Register</button>
       </div>
-      <button onclick="generateGroups()">Randomize Groups</button>
-      <div id="groupResults"></div>
-    </div>
 
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <h3>Welcome Back</h3>
+        <p>Sign in to access your portal.</p>
+        <input type="text" id="loginUsername" placeholder="Username" required>
+        <input type="password" id="loginPassword" placeholder="Password" required>
+        <button type="submit" style="width: 100%;">Sign In</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
+        <h3>Create Account</h3>
+        <p>Register as a new student or teacher.</p>
+        <input type="text" id="regFullName" placeholder="Full Name (e.g. John Doe)" required>
+        <input type="text" id="regUsername" placeholder="Choose Username" required>
+        <input type="password" id="regPassword" placeholder="Choose Password" required>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Account Role:</label>
+        <select id="regRole">
+          <option value="student">Student</option>
+          <option value="teacher">Teacher (Admin)</option>
+        </select>
+        <button type="submit" style="width: 100%;">Create Account</button>
+      </form>
+    </div>
   </div>
 
-  <!-- SHARED CLASS STREAM & QUIZZES -->
-  <div class="card">
-    <h3>Class Announcements & Quizzes</h3>
-    <div id="streamContainer"><i>No quizzes or posts added yet.</i></div>
-  </div>
+  <!-- DASHBOARD MAIN CONTENT (Shown after login) -->
+  <div id="dashboard" class="hidden">
 
-  <!-- STUDENT GRADE TRACKER -->
-  <div class="card">
-    <h3>Student Gradebook</h3>
-    <div id="studentSearchArea" class="hidden">
-      <input type="text" id="studentSearchName" placeholder="Enter your Name to search your grades...">
-      <button onclick="searchStudentGrade()">View My Scores</button>
+    <!-- TEACHER CONTROLS -->
+    <div id="teacherControls" class="hidden">
+      <div class="card">
+        <h3>1. Upload Student Grades (CSV)</h3>
+        <p>Select a CSV file with format: <b>Name, Section, Quiz1, Midterm, Final</b></p>
+        <input type="file" id="csvFileInput" accept=".csv">
+        <button onclick="processCSV()">Upload and Update Gradebook</button>
+      </div>
+
+      <div class="card">
+        <h3>2. Publish Quiz (Google Forms) or Docs</h3>
+        <input type="text" id="postTitle" placeholder="Title (e.g. Unit 1 Quiz)">
+        <select id="postType">
+          <option value="quiz">Quiz (Google Form Embed)</option>
+          <option value="doc">Assignment (Google Doc Embed)</option>
+        </select>
+        <textarea id="postContent" placeholder="Instructions for students..."></textarea>
+        <input type="url" id="embedUrl" placeholder="Paste Google Form or Google Doc Share/Embed Link">
+        <button onclick="addPost()">Publish Post</button>
+      </div>
+
+      <div class="card">
+        <h3>3. Random Group Generator</h3>
+        <textarea id="studentListInput" placeholder="Enter student names separated by commas (Auto-filled from CSV upload)"></textarea>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <select id="groupMode">
+              <option value="numGroups">Number of Groups</option>
+              <option value="perGroup">Students per Group</option>
+            </select>
+          </div>
+          <div>
+            <input type="number" id="groupCount" placeholder="Count" min="1" style="margin-top: 0;">
+          </div>
+        </div>
+        <button onclick="generateGroups()">Randomize Groups</button>
+        <div id="groupResults"></div>
+      </div>
     </div>
-    
-    <div id="gradeTableWrapper">
-      <table id="gradesTable">
-        <thead id="tableHeader">
-          <tr><th>No grades uploaded yet. Upload a CSV file above.</th></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+
+    <!-- CLASS STREAM & QUIZZES (Visible to both Roles) -->
+    <div class="card">
+      <h3>Class Stream & Quizzes</h3>
+      <div id="streamContainer" style="margin-top: 1rem;">
+        <p style="color: var(--text-muted);">No quizzes or announcements posted yet.</p>
+      </div>
     </div>
+
+    <!-- GRADEBOOK TRACKER -->
+    <div class="card">
+      <h3>Gradebook / Tracked Scores</h3>
+      <div class="table-wrapper">
+        <table id="gradesTable">
+          <thead id="tableHeader">
+            <tr><th>No grades available yet.</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
 </main>
 
 <script>
-  let parsedGradesData = [];
-  let posts = [];
+  // App State Initialization
+  let users = JSON.parse(localStorage.getItem('ch_users')) || [
+    { username: 'teacher', password: '123', name: 'Admin Teacher', role: 'teacher' }
+  ];
+  let currentUser = JSON.parse(localStorage.getItem('ch_active_user')) || null;
+  let parsedGradesData = JSON.parse(localStorage.getItem('ch_grades')) || [];
+  let posts = JSON.parse(localStorage.getItem('ch_posts')) || [];
 
-  function switchRole() {
-    const role = document.getElementById('roleSelect').value;
-    const teacherView = document.getElementById('teacherView');
-    const studentSearchArea = document.getElementById('studentSearchArea');
-
-    if (role === 'teacher') {
-      teacherView.classList.remove('hidden');
-      studentSearchArea.classList.add('hidden');
-      renderTable(parsedGradesData);
+  // Initialize UI on load
+  window.onload = function() {
+    if (currentUser) {
+      showDashboard();
     } else {
-      teacherView.classList.add('hidden');
-      studentSearchArea.classList.remove('hidden');
-      document.getElementById('tableBody').innerHTML = '';
+      showAuth();
+    }
+  };
+
+  // Auth Switcher
+  function switchAuthTab(tab) {
+    document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
+    document.getElementById('tabRegisterBtn').classList.toggle('active', tab === 'register');
+    document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+  }
+
+  function handleRegister(e) {
+    e.preventDefault();
+    const name = document.getElementById('regFullName').value.trim();
+    const username = document.getElementById('regUsername').value.trim().toLowerCase();
+    const password = document.getElementById('regPassword').value;
+    const role = document.getElementById('regRole').value;
+
+    if (users.find(u => u.username === username)) {
+      return alert('Username already taken. Please choose another.');
+    }
+
+    users.push({ username, password, name, role });
+    localStorage.setItem('ch_users', JSON.stringify(users));
+    alert('Account created! Logging you in...');
+    
+    loginUser(username, password);
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!loginUser(username, password)) {
+      alert('Invalid username or password.');
     }
   }
 
-  // 1. Process CSV File Upload
-  function processCSV() {
-    const fileInput = document.getElementById('csvFileInput');
-    const file = fileInput.files[0];
+  function loginUser(username, password) {
+    const user = users.find(u => u.username === username && u.password === password);
+    if (!user) return false;
 
-    if (!file) return alert('Please select a CSV file first.');
+    currentUser = user;
+    localStorage.setItem('ch_active_user', JSON.stringify(currentUser));
+    showDashboard();
+    return true;
+  }
+
+  function logout() {
+    localStorage.removeItem('ch_active_user');
+    currentUser = null;
+    showAuth();
+  }
+
+  function showAuth() {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('navUserArea').classList.add('hidden');
+  }
+
+  function showDashboard() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('navUserArea').classList.remove('hidden');
+    document.getElementById('currentUserText').innerText = `${currentUser.name} (${currentUser.role.toUpperCase()})`;
+
+    // Enforce Role View Controls
+    if (currentUser.role === 'teacher') {
+      document.getElementById('teacherControls').classList.remove('hidden');
+      renderTable(parsedGradesData);
+    } else {
+      document.getElementById('teacherControls').classList.add('hidden');
+      renderStudentSpecificGrade();
+    }
+
+    renderPosts();
+  }
+
+  // Grade Handling
+  function processCSV() {
+    const file = document.getElementById('csvFileInput').files[0];
+    if (!file) return alert('Please select a CSV file.');
 
     const reader = new FileReader();
     reader.onload = function(e) {
-      const text = e.target.result;
-      const lines = text.split('\n').filter(line => line.trim() !== '');
-      
-      if (lines.length === 0) return alert('File is empty.');
-
+      const lines = e.target.result.split('\n').filter(l => l.trim() !== '');
       parsedGradesData = lines.map(line => line.split(',').map(cell => cell.trim()));
+      
+      localStorage.setItem('ch_grades', JSON.stringify(parsedGradesData));
       renderTable(parsedGradesData);
 
-      // Auto-fill student names for group generator
       const names = parsedGradesData.slice(1).map(row => row[0]).filter(Boolean);
       document.getElementById('studentListInput').value = names.join(', ');
 
-      alert('Grades loaded successfully!');
+      alert('Gradebook saved and updated!');
     };
     reader.readAsText(file);
   }
 
   function renderTable(data) {
     if (!data || data.length === 0) return;
-
-    const thead = document.getElementById('tableHeader');
-    const tbody = document.getElementById('tableBody');
-
-    // Headers
-    thead.innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join('')}</tr>`;
-
-    // Rows
-    tbody.innerHTML = data.slice(1).map(row => `
+    document.getElementById('tableHeader').innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join('')}</tr>`;
+    document.getElementById('tableBody').innerHTML = data.slice(1).map(row => `
       <tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
     `).join('');
   }
 
-  // 2. Search Individual Grade for Student
-  function searchStudentGrade() {
-    const nameQuery = document.getElementById('studentSearchName').value.toLowerCase().trim();
-    if (!nameQuery) return alert('Please enter your name.');
-    if (parsedGradesData.length === 0) return alert('No grades have been uploaded by the teacher yet.');
-
+  function renderStudentSpecificGrade() {
+    if (!parsedGradesData || parsedGradesData.length === 0) return;
     const headers = parsedGradesData[0];
-    const studentRow = parsedGradesData.slice(1).find(row => row[0].toLowerCase().includes(nameQuery));
+    const studentRow = parsedGradesData.slice(1).find(row => row[0].toLowerCase().includes(currentUser.name.toLowerCase()));
 
-    const tbody = document.getElementById('tableBody');
-    if (!studentRow) {
-      tbody.innerHTML = `<tr><td colspan="${headers.length}">No records found matching "${nameQuery}".</td></tr>`;
-      return;
+    if (studentRow) {
+      renderTable([headers, studentRow]);
+    } else {
+      document.getElementById('tableHeader').innerHTML = `<tr><th>Student Record</th></tr>`;
+      document.getElementById('tableBody').innerHTML = `<tr><td>No grade records found for account name: "${currentUser.name}".</td></tr>`;
     }
-
-    renderTable([headers, studentRow]);
   }
 
-  // 3. Post Quizzes / Docs
+  // Posts & Assignments
   function addPost() {
     const title = document.getElementById('postTitle').value;
     const type = document.getElementById('postType').value;
     const content = document.getElementById('postContent').value;
     const url = document.getElementById('embedUrl').value;
 
-    if (!title) return alert('Please add a title.');
+    if (!title) return alert('Post title required.');
 
     posts.unshift({ title, type, content, url });
+    localStorage.setItem('ch_posts', JSON.stringify(posts));
     renderPosts();
   }
 
@@ -201,42 +410,38 @@
     if (posts.length === 0) return;
 
     container.innerHTML = posts.map(p => `
-      <div style="border-bottom: 1px solid #ddd; padding-bottom: 1rem; margin-bottom: 1rem;">
-        <h4>[${p.type.toUpperCase()}] ${p.title}</h4>
-        <p>${p.content}</p>
+      <div style="border-bottom: 1px solid var(--card-border); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase;">${p.type}</span>
+        <h4 style="font-size: 1.1rem; color: #fff; margin: 0.2rem 0 0.5rem;">${p.title}</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">${p.content}</p>
         ${p.url ? `<iframe src="${p.url}"></iframe>` : ''}
       </div>
     `).join('');
   }
 
-  // 4. Random Group Generator
+  // Random Group Generator
   function generateGroups() {
     const input = document.getElementById('studentListInput').value;
-    if (!input) return alert('Please enter student names or upload a CSV file.');
+    if (!input) return alert('Enter student names or upload CSV first.');
 
-    let students = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    let students = input.split(',').map(s => s.trim()).filter(Boolean);
     const mode = document.getElementById('groupMode').value;
     const count = parseInt(document.getElementById('groupCount').value);
 
-    if (!count || count < 1) return alert('Enter a valid count number.');
+    if (!count || count < 1) return alert('Enter a valid count.');
 
-    // Shuffle Array
     let shuffled = [...students].sort(() => 0.5 - Math.random());
     let groups = [];
 
     if (mode === 'numGroups') {
       for (let i = 0; i < count; i++) groups.push([]);
-      shuffled.forEach((student, index) => {
-        groups[index % count].push(student);
-      });
+      shuffled.forEach((st, idx) => groups[idx % count].push(st));
     } else {
-      while (shuffled.length > 0) {
-        groups.push(shuffled.splice(0, count));
-      }
+      while (shuffled.length > 0) groups.push(shuffled.splice(0, count));
     }
 
-    document.getElementById('groupResults').innerHTML = groups.map((g, idx) => `
-      <div class="group-box"><strong>Group ${idx + 1}:</strong> ${g.join(', ')}</div>
+    document.getElementById('groupResults').innerHTML = groups.map((g, i) => `
+      <div class="group-box"><strong style="color: var(--accent-blue);">Group ${i + 1}:</strong> ${g.join(', ')}</div>
     `).join('');
   }
 </script>
