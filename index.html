@@ -72,7 +72,6 @@
       font-size: 0.85rem;
     }
 
-    /* Layout Structure with Sidebar */
     .app-layout {
       display: flex;
       flex: 1;
@@ -271,16 +270,11 @@
   <!-- MAIN CONTENT AREA -->
   <main class="main-content">
 
-    <!-- STUDENT ENROLLMENT CARD (DIRECTED VIA INVITE LINK) -->
+    <!-- STUDENT ENROLLMENT CARD -->
     <div id="studentEnrollCard" class="card hidden">
       <h3>Classroom Enrollment</h3>
       <p id="enrollSubtitle">Select which section you belong to.</p>
       
-      <div id="teacherSelectGroup" class="hidden">
-        <label style="font-size: 0.8rem; color: var(--text-muted);">Teacher:</label>
-        <select id="enrollTeacherSelect" onchange="populateSectionEnrollDropdown()"></select>
-      </div>
-
       <label style="font-size: 0.8rem; color: var(--text-muted);">Choose Your Section:</label>
       <select id="enrollSectionSelect">
         <option value="">-- Choose Section --</option>
@@ -296,7 +290,7 @@
       <!-- Invite Link Card -->
       <div class="card" style="border-left: 4px solid var(--accent-blue);">
         <h3>Personalized Student Invite Link</h3>
-        <p>Send this link to your students. Once clicked, they only need to pick their section to enroll.</p>
+        <p>Send this link to your students. It directly loads your created sections for them to enroll.</p>
         <div style="display: flex; gap: 10px;">
           <input type="text" id="inviteLinkInput" readonly style="margin: 0;">
           <button onclick="copyInviteLink()">Copy Invite Link</button>
@@ -369,7 +363,7 @@
             </tr>
           </thead>
           <tbody id="rosterTableBody">
-            <tr><td colspan="3" style="color: var(--text-muted);">Select a section from the left sidebar to view roster.</td></tr>
+            <tr><td colspan="3" style="color: var(--text-muted);">Select a section to view roster.</td></tr>
           </tbody>
         </table>
       </div>
@@ -406,6 +400,7 @@
   let currentUser = JSON.parse(localStorage.getItem('ch_active_user')) || null;
   let teacherData = JSON.parse(localStorage.getItem('ch_teacher_data')) || {};
   let activeSection = null;
+  let inviteTeacherUsername = null; // Store the teacher from URL parameter
 
   window.onload = function() {
     if (currentUser) {
@@ -506,7 +501,6 @@
     }
   }
 
-  // Teacher Workspace & Left Sidebar Management
   function setupTeacherDashboard() {
     const store = getTeacherStore(currentUser.username);
     
@@ -541,7 +535,6 @@
   function selectSection(secName) {
     activeSection = secName;
 
-    // Update section titles in UI
     const targets = ['activeSectionHeader', 'activeStreamHeader', 'activeGradeHeader', 'csvActiveSectionText', 'postActiveSectionText', 'groupActiveSectionText'];
     targets.forEach(id => {
       const el = document.getElementById(id);
@@ -617,55 +610,43 @@
     `).join('');
   }
 
-  // Student Enrollment & Direct Invite Flow
+  // Student Dashboard Workflow
   function setupStudentDashboard() {
-    const teachers = users.filter(u => u.role === 'teacher');
     const urlParams = new URLSearchParams(window.location.search);
     const teacherParam = urlParams.get('teacher');
+    const teachers = users.filter(u => u.role === 'teacher');
 
-    const teacherSelectGroup = document.getElementById('teacherSelectGroup');
-    const teacherSelect = document.getElementById('enrollTeacherSelect');
     const enrollSubtitle = document.getElementById('enrollSubtitle');
+    const secSelect = document.getElementById('enrollSectionSelect');
 
+    // Check if URL has a valid teacher link
     if (teacherParam && teachers.some(t => t.username === teacherParam)) {
-      // Direct Link: Lock teacher and show section selection only
+      inviteTeacherUsername = teacherParam;
       const targetTeacher = teachers.find(t => t.username === teacherParam);
-      teacherSelectGroup.classList.add('hidden');
-      teacherSelect.innerHTML = `<option value="${targetTeacher.username}" selected>${targetTeacher.name}</option>`;
-      enrollSubtitle.innerHTML = `Enrolling under <b>${targetTeacher.name}</b>. Select which section you belong to:`;
-      populateSectionEnrollDropdown();
+      const store = getTeacherStore(teacherParam);
+
+      enrollSubtitle.innerHTML = `Enrolling under <b>${targetTeacher.name}</b>. Select your section:`;
+      secSelect.innerHTML = store.sections.map(s => `<option value="${s}">${s}</option>`).join('');
     } else {
-      // Generic Access: Choose Teacher
-      teacherSelectGroup.classList.remove('hidden');
-      teacherSelect.innerHTML = '<option value="">-- Choose Teacher --</option>' + 
-        teachers.map(t => `<option value="${t.username}">${t.name}</option>`).join('');
-      enrollSubtitle.innerText = 'Select your teacher and section to enroll:';
+      // Fallback if accessed directly without teacher link
+      const defaultTeacher = teachers[0] || { username: 'teacher', name: 'Prof. Davis' };
+      inviteTeacherUsername = defaultTeacher.username;
+      const store = getTeacherStore(inviteTeacherUsername);
+
+      enrollSubtitle.innerHTML = `Enrolling under <b>${defaultTeacher.name}</b>. Select your section:`;
+      secSelect.innerHTML = store.sections.map(s => `<option value="${s}">${s}</option>`).join('');
     }
 
     updateStudentEnrollmentStatus();
     renderStudentView();
   }
 
-  function populateSectionEnrollDropdown() {
-    const teacherUsername = document.getElementById('enrollTeacherSelect').value;
-    const secSelect = document.getElementById('enrollSectionSelect');
-
-    if (!teacherUsername) {
-      secSelect.innerHTML = '<option value="">-- Choose Section --</option>';
-      return;
-    }
-
-    const store = getTeacherStore(teacherUsername);
-    secSelect.innerHTML = store.sections.map(s => `<option value="${s}">${s}</option>`).join('');
-  }
-
   function enrollStudent() {
-    const teacherUsername = document.getElementById('enrollTeacherSelect').value;
     const section = document.getElementById('enrollSectionSelect').value;
 
-    if (!teacherUsername || !section) return alert('Select a section to enroll.');
+    if (!inviteTeacherUsername || !section) return alert('Select a valid section to enroll.');
 
-    const store = getTeacherStore(teacherUsername);
+    const store = getTeacherStore(inviteTeacherUsername);
     const existing = store.enrollments.find(e => e.studentUsername === currentUser.username);
 
     if (existing) {
@@ -719,7 +700,6 @@
     selectSection(enrolledObj.enrollment.section);
   }
 
-  // Features: CSV, Posts, Groups
   function processCSV() {
     if (!activeSection) return alert('Select a section first.');
     const file = document.getElementById('csvFileInput').files[0];
